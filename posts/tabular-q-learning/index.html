@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/style.css" />
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+</head>
+
+<body class="pure">
+    <nav class="navbar pure-menu pure-menu-horizontal">
+    <ul class="pure-menu-list">
+        
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/">Home</a>
+        </li>
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/about/">About</a>
+        </li>
+        
+    </ul>
+</nav>
+<div class="banner">
+</div>
+
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-4-5 pure-u-xl-7-8">
+            <div class="content">
+                
+<section class="post">
+    <header class="post-header">
+        <h2 class="post-title">Beat Mazes with Reinforcement Learning</h2>
+        
+        <p class="post-meta">
+            <span>
+                <i class="fas fa-calendar"></i>
+                2020-04-04
+            </span>
+        </p>
+        
+    </header>
+    <div class="post-content">
+        <p>RL is a blooming field at the moment. In my opinion, it has the most potential to become a general AI. But the main idea behind RL is actually simple and straight forward. In this blog post let’s build a RL agent that can beat randomly generated mazes to demonstrate this idea.</p>
+<h4 id="generate-random-maze">Generate Random Maze</h4>
+<p>To start, we need a maze. And honestly manually draw maze is pretty painful, therefore we are going to generate one randomly. There are many algorithm that can generate mazes: Depth-first search, Recursive backtracker, Randomized Kruskal’s algorithm and etc.</p>
+<p>I have picked a visually pleasing one: Recursive division method. It divides an empty zone into four zones, and then add 3 passages to the walls we just added, which makes sure all the zones are connected. Then divide all the sub-zones recursively until the zone is too small.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">generate_maze</span>(shape, random<span style="color:#f92672">=</span>np<span style="color:#f92672">.</span>random):
+    <span style="color:#75715e"># make map: 1 means passage and 0 means wall</span>
+    data <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>ones(shape)
+
+    <span style="color:#75715e"># create enclosing wall</span>
+    data[[<span style="color:#ae81ff">0</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], :] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+    data[:, [<span style="color:#ae81ff">0</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">rnd</span>(<span style="color:#f92672">*</span>arange, grp<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>):
+        space <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(<span style="color:#f92672">*</span>arange)
+        space <span style="color:#f92672">=</span> space[space <span style="color:#f92672">%</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> grp]
+
+        <span style="color:#66d9ef">return</span> random<span style="color:#f92672">.</span>choice(space)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">proc</span>(data):
+        w, h <span style="color:#f92672">=</span> data<span style="color:#f92672">.</span>shape
+        <span style="color:#66d9ef">assert</span> w <span style="color:#f92672">%</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">and</span> h <span style="color:#f92672">%</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#39;Maze size can only be odd number!&#39;</span>
+
+        <span style="color:#66d9ef">if</span> w <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">and</span> h <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">3</span>:
+            <span style="color:#75715e"># divide into 4 zones</span>
+            x <span style="color:#f92672">=</span> rnd(w, grp<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+            y <span style="color:#f92672">=</span> rnd(h, grp<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+
+            data[x, :] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+            data[:, y] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+
+            passages <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>array([
+                (rnd(x), y),
+                (rnd(x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>, w), y),
+                (x, rnd(y)),
+                (x, rnd(y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>, h)),
+            ])
+
+            data[tuple(passages[random<span style="color:#f92672">.</span>choice(<span style="color:#ae81ff">4</span>, size<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>, replace<span style="color:#f92672">=</span>False)]<span style="color:#f92672">.</span>T)] <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+
+            <span style="color:#75715e"># divide subzones</span>
+            proc(data[:x, :y])
+            proc(data[x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>:, :y])
+            proc(data[:x, y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>:])
+            proc(data[x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>:, y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>:])
+
+    <span style="color:#75715e"># set entrance and exit</span>
+    data[[<span style="color:#ae81ff">0</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], [<span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>]] <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+
+    <span style="color:#75715e"># add internal walls</span>
+    proc(data[<span style="color:#ae81ff">1</span>:<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>:<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>])
+
+    <span style="color:#66d9ef">return</span> data</code></pre></div>
+<p>Here is an maze output for dimension 101, 101.</p>
+<p><img src="make_maze.gif" /></p>
+<h3 id="make-a-simulation-environment">Make a Simulation Environment</h3>
+<p>In RL, we educate our agent by stick and carrot. If an agent have done something right we give it a positive reward, if not we punish it by a negative reward. The goal of an agent is to maximize the sum of discounted rewards.</p>
+<p>In our maze world, every step the agent is receiving a small negative reward, which will encourage the agent the find the shortest way to the exit. When agent arrive the exit, it will not able to receive any future punishment after that. Therefore the optimization algorithm will try to find a fastest way to end its suffer.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">SimpleMazeWorld</span>:
+
+    <span style="color:#66d9ef">def</span> __init__(self, shape, random<span style="color:#f92672">=</span>np<span style="color:#f92672">.</span>random):
+        self<span style="color:#f92672">.</span>shape <span style="color:#f92672">=</span> shape
+
+        self<span style="color:#f92672">.</span>data <span style="color:#f92672">=</span> generate_maze(shape, random<span style="color:#f92672">=</span>random)
+
+        self<span style="color:#f92672">.</span>rewards <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>ones(shape) <span style="color:#f92672">*</span> <span style="color:#f92672">-.</span><span style="color:#ae81ff">1</span>
+        self<span style="color:#f92672">.</span>rewards[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+
+        <span style="color:#75715e"># We can have many way of ending, for example: a trap that agent falls in and can never get out.</span>
+        self<span style="color:#f92672">.</span>terminals <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>array([(self<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, self<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>)])
+        self<span style="color:#f92672">.</span>reset()
+
+    <span style="color:#a6e22e">@property</span>
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">state</span>(self):
+        <span style="color:#e6db74">&#34;convience function for calculate the state&#34;</span>
+        <span style="color:#66d9ef">return</span> np<span style="color:#f92672">.</span>ravel_multi_index(self<span style="color:#f92672">.</span>pos, self<span style="color:#f92672">.</span>shape)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">reset</span>(self):
+        <span style="color:#e6db74">&#34;reset agent after episode ends&#34;</span>
+        self<span style="color:#f92672">.</span>pos <span style="color:#f92672">=</span> [<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>]
+        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>state
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, action):
+        <span style="color:#e6db74">&#34;interactive step&#34;</span>
+        <span style="color:#66d9ef">assert</span> action <span style="color:#f92672">&gt;=</span><span style="color:#ae81ff">0</span> <span style="color:#f92672">and</span> action <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#39;Where are you going?&#39;</span>
+
+        <span style="color:#75715e"># convience functions</span>
+        <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">is_done</span>():
+            <span style="color:#66d9ef">return</span> (self<span style="color:#f92672">.</span>pos <span style="color:#f92672">==</span> self<span style="color:#f92672">.</span>terminals)<span style="color:#f92672">.</span>all(axis<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">.</span>any()
+        <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">reward</span>():
+            <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>rewards[self<span style="color:#f92672">.</span>pos]
+
+        <span style="color:#66d9ef">if</span> is_done():
+            <span style="color:#75715e"># agent can not receive any reward after it arrive the exit</span>
+            <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>state, reward(), is_done(), {}
+        <span style="color:#66d9ef">else</span>:
+            x, y <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>pos
+            w, h <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>shape
+
+            dx, dy <span style="color:#f92672">=</span> [
+                (<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>), (<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>), (<span style="color:#ae81ff">0</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>), (<span style="color:#ae81ff">0</span>, <span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>),
+            ][action]
+
+            <span style="color:#75715e"># make sure our agent does not move off grid or into walls</span>
+            xp <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>clip(x <span style="color:#f92672">+</span> dx, <span style="color:#ae81ff">0</span>, w <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)
+            yp <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>clip(y <span style="color:#f92672">+</span> dy, <span style="color:#ae81ff">0</span>, h <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)
+
+            <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>data[xp, yp] <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>:
+                x <span style="color:#f92672">=</span> xp
+                y <span style="color:#f92672">=</span> yp
+
+            self<span style="color:#f92672">.</span>pos <span style="color:#f92672">=</span> x, y
+            <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>state, reward(), is_done(), {}</code></pre></div>
+<h3 id="make-a-agent-with-q-learning">Make a Agent with Q Learning</h3>
+<p>As stated before, the goal of an agent is to maximize sum of discounted rewards. The first question we need to answer is how to measure a given policy <span class="math inline">\(\pi\)</span>, as if we can’t measure it, we can’t manage it.</p>
+<p>The most straight forward way is to use expected discounted sum of rewards to measure the quality of policy <span class="math inline">\(\pi\)</span>.</p>
+<p><span class="math display">\[
+\begin{aligned}
+v_\pi(s)
+&amp;= E_\pi[R_{t+1} + \gamma R_{t+2} + \dots + \gamma ^N R_N] \\
+&amp;= E_\pi[R_{t+1} + \gamma v_\pi(S_{t + 1}) \vert S_t = s, A_t = \pi(s)] \\
+where &amp;
+\\
+&amp; R_t \text{ is the reward received at time } t
+\end{aligned}
+\]</span></p>
+<p>However knowing <span class="math inline">\(v_\pi\)</span> alone is not enough, as an agent only know with policy <span class="math inline">\(\pi\)</span> which state it want to be in the most. But it does not know which action to take to be in that state. Therefore we need another function:</p>
+<p><span class="math display">\[
+q_\pi(s, a) = E[R_t + \gamma v_\pi(S_{t+1}) \vert S_t = s, A_t = a]
+\]</span></p>
+<p>That is an agent take an arbitrary action at time <span class="math inline">\(t\)</span>, and then use <span class="math inline">\(\pi\)</span> to make subsequence decisions. Then to obtain the optimal policy <span class="math inline">\(\pi_*\)</span>, all we need is to have a function:</p>
+<p><span class="math display">\[
+\begin{aligned}
+q_*(s, a) &amp;= \underset{\pi}{\max}q_\pi(s, a)
+\\&amp;= E[R_{t + 1} + \gamma \underset{\pi}{\max} v_\pi(S_{t + 1}) \vert S_t = s, A_t = a]
+\\&amp;= \underset{s&#39;, r}{\sum}p(s&#39;, r| s, a)[r + \gamma \underset{\pi}{\max}v_\pi(s&#39;)]
+\\&amp;= \underset{s&#39;, r}{\sum}p(s&#39;, r| s, a)[r + \gamma \underset{a&#39;}{\max}q_*(s&#39;, a&#39;)]
+\end{aligned}
+\]</span></p>
+<p>Which is also called Bellman optimality equation for <span class="math inline">\(q_*\)</span>. And yes, that is also where the name Q in Q Learning comes from. Now, we should have enough math to implement the Q learning agent.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py">random <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>RandomState(<span style="color:#ae81ff">12345</span>)
+shape <span style="color:#f92672">=</span> (<span style="color:#ae81ff">15</span>, <span style="color:#ae81ff">15</span>)
+env <span style="color:#f92672">=</span> SimpleMazeWorld(shape, random)
+
+<span style="color:#75715e"># we are using linear epsilon decay strategy</span>
+espilon_space <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>linspace(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0.05</span>, <span style="color:#ae81ff">1000</span>)
+
+Q <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>zeros((np<span style="color:#f92672">.</span>product(shape), <span style="color:#ae81ff">4</span>))
+
+<span style="color:#75715e"># we don&#39;t actually need that many iterations, feel free to reduce it.</span>
+nepoch <span style="color:#f92672">=</span> <span style="color:#ae81ff">2000</span>
+<span style="color:#75715e"># we don&#39;t want a single episode takes too long</span>
+max_steps <span style="color:#f92672">=</span> <span style="color:#ae81ff">300</span>
+
+<span style="color:#75715e"># discount factor</span>
+gamma <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+<span style="color:#75715e"># learning rate</span>
+alpha <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.05</span>
+
+<span style="color:#66d9ef">for</span> epoch <span style="color:#f92672">in</span> tqdm(np<span style="color:#f92672">.</span>arange(nepoch)):
+    state <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>reset()
+    epsilon <span style="color:#f92672">=</span> epsilon_space[np<span style="color:#f92672">.</span>clip(epoch, <span style="color:#ae81ff">0</span>, epsilon_space<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)]
+
+    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> np<span style="color:#f92672">.</span>arange(max_steps):
+        <span style="color:#66d9ef">if</span> random<span style="color:#f92672">.</span>random() <span style="color:#f92672">&lt;</span> epsilon:
+            action <span style="color:#f92672">=</span> random<span style="color:#f92672">.</span>choice(<span style="color:#ae81ff">4</span>)
+        <span style="color:#66d9ef">else</span>:
+            space <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(<span style="color:#ae81ff">4</span>)[Q[state, :] <span style="color:#f92672">==</span> Q[state, :]<span style="color:#f92672">.</span>max()]
+            action <span style="color:#f92672">=</span> random<span style="color:#f92672">.</span>choice(space)
+
+        next_state, reward, is_done, _ <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>step(action)
+
+        <span style="color:#75715e"># Bellman optimality equation</span>
+        expected <span style="color:#f92672">=</span> reward <span style="color:#f92672">+</span> gamma <span style="color:#f92672">*</span> Q[next_state, :]<span style="color:#f92672">.</span>max() <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> is_done)
+
+        <span style="color:#75715e"># this is something  actually simmiliar to gradent descend</span>
+        Q[state, action] <span style="color:#f92672">+=</span> alpha <span style="color:#f92672">*</span> (expected <span style="color:#f92672">-</span> Q[state, action])
+
+        <span style="color:#66d9ef">if</span> is_done:
+            <span style="color:#66d9ef">break</span>
+        state <span style="color:#f92672">=</span> next_state</code></pre></div>
+<p>After the model trained, here is how our agent behaves:</p>
+<p><img src="q_learning.gif" /></p>
+<h3 id="learn-more">Learn More</h3>
+<p>In this post, I have brief explained the idea behind RL. If you are interested and would like to read more about it, please checkout <a href="http://incompleteideas.net/book/the-book-2nd.html">Sutton and Barto’s Book</a>.</p>
+
+    </div>
+</section>
+
+            </div>
+        </div>
+        <div class="pure-u-1 pure-u-lg-1-5 pure-u-xl-1-8">
+            <div class="sidebar">
+                <div class="profile">
+    <img id="avatar-image" class="avatar" src="/img/ca114335172f7423310709f1ab26e4e6-yeyan.jpg"></img>
+    <h2 class="title"> Ye Yan </h2>
+    <h2 class="subtitle"> Sr. Data Scientist </h2>
+</div>
+
+<div class="social">
+    <ul class="pure-menu-list">
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="http://github.com/yeyan">
+                <i class="fab fa-github"></i>
+                Github
+            </a>
+            <a class="pure-menu-link" href="https://www.linkedin.com/in/ye-yan-83921a154">
+                <i class="fab fa-linkedin"></i>
+                LinkedIn
+            </a>
+        </li>
+    </ul>
+</div>
+
+            </div>
+        </div>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

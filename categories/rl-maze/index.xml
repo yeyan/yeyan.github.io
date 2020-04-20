@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Rl Maze on Ye&#39;s ML Cafe</title>
+    <link>http://example.org/categories/rl-maze/</link>
+    <description>Recent content in Rl Maze on Ye&#39;s ML Cafe</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 10 Apr 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="http://example.org/categories/rl-maze/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Beat Mazes with Reinforcement Learning</title>
+      <link>http://example.org/posts/tabular-q-learning/</link>
+      <pubDate>Fri, 10 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://example.org/posts/tabular-q-learning/</guid>
+      <description>RL is a blooming field at the moment. In my opinion, it has the most potential to become a general AI. But the main idea behind RL is actually simple and straight forward. In this blog post let’s build a RL agent that can beat randomly generated mazes to demonstrate this idea.
+Generate Random Maze To start, we need a maze. And honestly manually draw maze is pretty painful, therefore we are going to generate one randomly.</description>
+    </item>
+    
+  </channel>
+</rss>
