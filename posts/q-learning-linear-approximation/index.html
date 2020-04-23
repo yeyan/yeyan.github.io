@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/style.css" />
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+</head>
+
+<body class="pure">
+    <nav class="navbar pure-menu pure-menu-horizontal">
+    <ul class="pure-menu-list">
+        
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/">Home</a>
+        </li>
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/about/">About</a>
+        </li>
+        
+    </ul>
+</nav>
+<div class="banner">
+</div>
+
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-4-5 pure-u-xl-7-8">
+            <div class="content">
+                
+<section class="post">
+    <header class="post-header">
+        <h2 class="post-title">Q Learning With Linear Approximation</h2>
+        
+        <p class="post-meta">
+            <span>
+                <i class="fas fa-calendar"></i>
+                2020-04-04
+            </span>
+        </p>
+        
+    </header>
+    <div class="post-content">
+        <p>In our last post, we have used a table to track action values and built an agent that can solve randomly generated mazes. Table based <span class="math inline">\(Q(s, a)\)</span> is pretty useful. Even in some cases that states are continuous, by discretizing states into integers we can still present action-value function with a table. In this post we are going to discuss a more general way of representing action-value function with Linear methods.</p>
+<h3 id="linear-method">Linear Method</h3>
+<p>We can denote action value as <span class="math inline">\(Q(s, a) = W(a)^TX(s)\)</span>, where <span class="math inline">\(W(a)\)</span> is the weight vector and <span class="math inline">\(X(s)\)</span> is the feature vector. Table base method is actually special case of linear method. For example, we have a environment that have n states, and we use the following vectors to present each state:</p>
+<p><span class="math display">\[
+\begin{aligned}
+X(0) &amp;= \begin{bmatrix} 1&amp; 0&amp; \dots&amp; 0&amp; \end{bmatrix}^T\\
+X(1) &amp;= \begin{bmatrix} 0&amp; 1&amp; \dots&amp; 0&amp; \end{bmatrix}^T\\
+     &amp;\vdots\\
+X(n) &amp;= \begin{bmatrix} 0&amp; 0&amp; \dots&amp; 1&amp; \end{bmatrix}^T
+\end{aligned}
+\]</span></p>
+<p>This is also call one-hot encoding. As at any time, there is only 1 entry in the vector that is not 0 but 1. Then the dot product will become a index selection, which is exactly the table base method.</p>
+<h3 id="tile-encoding">Tile Encoding</h3>
+<p>In reality the state values are often real values. One way of dealing with this is discretize real numbers into integers. As shown in the following figure, we can draw a grid on the value plane (If the state is two dimensional), and assign a integer value to each box, then any state falls into the box can be represented with the number assigned to the box.</p>
+<p><img src="tile-encoding-1.png" /></p>
+<p>And we can have multiple grids at once with each grid offset each other a little bit, as shown in the following figure.</p>
+<p><img src="tile-encoding-3.png" /></p>
+<p>Here is an implementation of tile encoding in python.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">make_activate</span>(env, tiles, tilings):
+    <span style="color:#e6db74">&#34;&#34;&#34;
+</span><span style="color:#e6db74">    make activate function which encode state into tile coding
+</span><span style="color:#e6db74">
+</span><span style="color:#e6db74">    params:
+</span><span style="color:#e6db74">        env     : AI Gym environment
+</span><span style="color:#e6db74">        tiles   : an array specify how many tiles we should have at each dimension
+</span><span style="color:#e6db74">        tilings : how many grids we should have
+</span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+    
+    obs <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>observation_space
+    lb, ub <span style="color:#f92672">=</span> obs<span style="color:#f92672">.</span>low, obs<span style="color:#f92672">.</span>high
+    
+    <span style="color:#75715e"># We need a way of ravel multi-index. see aslo numpy.ravel_multi_index</span>
+    units <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>hstack([[<span style="color:#ae81ff">1</span>], np<span style="color:#f92672">.</span>cumprod((tilings, ) <span style="color:#f92672">+</span> tuple(tiles))])[:<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
+
+    <span style="color:#75715e"># We want our grid one tile larger than the value range, </span>
+    <span style="color:#75715e"># therefore we don&#39;t get overflow when shifting the grid.</span>
+    scale <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>diag((np<span style="color:#f92672">.</span>array(tiles) <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">/</span> (ub <span style="color:#f92672">-</span> lb))
+    
+    <span style="color:#75715e"># grid offset</span>
+    offset <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(tilings) <span style="color:#f92672">/</span> tilings
+    
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">feature</span>(x, debug<span style="color:#f92672">=</span>False):
+
+        <span style="color:#75715e"># We don&#39;t really generate grid to determine which tile we are, </span>
+        <span style="color:#75715e"># but we project the state on a hyper-cube with size defined by tiling and stiles </span>
+        <span style="color:#75715e"># At last we can use np.floor to acquire the multi-index of a given state.</span>
+
+        fs <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>column_stack([
+            np<span style="color:#f92672">.</span>arange(tilings), 
+            np<span style="color:#f92672">.</span>floor((scale <span style="color:#960050;background-color:#1e0010">@</span> (x <span style="color:#f92672">-</span> lb))<span style="color:#f92672">.</span>reshape(<span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">+</span> offset<span style="color:#f92672">.</span>reshape(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>))<span style="color:#f92672">.</span>astype(int)
+        ])
+        
+        <span style="color:#75715e"># We ravel the multi-index by acquire the dot product with units</span>
+        <span style="color:#66d9ef">return</span> units <span style="color:#960050;background-color:#1e0010">@</span> fs<span style="color:#f92672">.</span>T
+    
+    <span style="color:#66d9ef">return</span> feature</code></pre></div>
+<h3 id="q-learning-with-tile-encoding">Q-Learning with Tile Encoding</h3>
+<p>To make sure we have a good approximation of the optimal action value function, we want <span class="math inline">\(\sum \mu(s) [Q^*(s, a) - Q(s, a, W)]^2\)</span> to be minimum, where <span class="math inline">\(Q^*\)</span> is the optimal policy, s and s’ are current state and next state correspondingly, <span class="math inline">\(r\)</span> is the reward, <span class="math inline">\(\mu(s)\)</span> is the state distribution. We can update <span class="math inline">\(W\)</span> with stochastic semi-gradient descent:</p>
+<p><span class="math display">\[
+\begin{aligned}
+W_{t + 1} &amp;= W_t - \frac{1}{2}\alpha\nabla[Q^*(s, a) - X(s)^T W_t]^2\\
+          &amp;= W_t - \alpha[Q^*(s, a) - Q(s, a, W_t)] X(s)
+\end{aligned}
+\]</span></p>
+<p>Also there is an implementation trick we used here. <span class="math inline">\(X(s)\)</span> is a special vector, majority of it are zeros and the rest entries are ones. If we denote <span class="math inline">\((i_1, i_2 \dots i_n)\)</span> the index of none zeros entries of <span class="math inline">\(X(s)\)</span>, then <span class="math inline">\(W(s)^TX(s) = \sum_{j=i_1}^{i_n} W_j\)</span>. Therefore we avoid the dot product by simply summing up corresponding none zero entries in <span class="math inline">\(W(s)\)</span>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py">n_action <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>action_space<span style="color:#f92672">.</span>n
+
+<span style="color:#75715e"># How many epoch and max_steps we train </span>
+n_epoch <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>
+n_maxstep <span style="color:#f92672">=</span> <span style="color:#ae81ff">300</span>
+
+<span style="color:#75715e"># Feature extraction function with 20 10x10 tiles </span>
+activate <span style="color:#f92672">=</span> make_activate(env, [<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">10</span>], <span style="color:#ae81ff">20</span>)
+
+<span style="color:#75715e"># Linear weight</span>
+W <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>zeros((<span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">20</span>, <span style="color:#ae81ff">3</span>))
+
+<span style="color:#75715e"># Learning rate</span>
+alpha <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.01</span>
+
+<span style="color:#75715e"># Discount, as the task is episodic we can make it equal to 1</span>
+gamma <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+
+<span style="color:#75715e"># Linear degraded ϵ</span>
+epsilon_space <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>linspace(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0.05</span>, n_epoch <span style="color:#f92672">//</span> <span style="color:#ae81ff">2</span>)
+
+
+<span style="color:#66d9ef">with</span> tqdm(range(n_epoch)) <span style="color:#66d9ef">as</span> prog:
+    <span style="color:#66d9ef">for</span> epoch <span style="color:#f92672">in</span> prog:
+        state <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>reset()
+        epsilon <span style="color:#f92672">=</span> epsilon_space[min(epoch, epsilon_space<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)]
+
+        <span style="color:#75715e"># the environment we use is actually time bounded, we can also use `while True:`</span>
+        <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(n_maxstep):
+            s <span style="color:#f92672">=</span> activate(state)
+
+            <span style="color:#66d9ef">if</span> np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>rand() <span style="color:#f92672">&lt;</span> epsilon:
+                action <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>action_space<span style="color:#f92672">.</span>sample()
+            <span style="color:#66d9ef">else</span>:
+                values <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>sum(W[s, :], axis<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+                action <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>choice(np<span style="color:#f92672">.</span>arange(n_action)[values <span style="color:#f92672">==</span> np<span style="color:#f92672">.</span>max(values)])
+
+            state_next, reward, is_done, _ <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>step(action)
+            sp <span style="color:#f92672">=</span> activate(state_next)
+                
+            <span style="color:#75715e"># np.sum(W[sp], axis=0) is another way to do dot product</span>
+            expected <span style="color:#f92672">=</span> reward <span style="color:#f92672">+</span> gamma <span style="color:#f92672">*</span> np<span style="color:#f92672">.</span>max(np<span style="color:#f92672">.</span>sum(W[sp], axis<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)) <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> is_done)
+            W[s, action] <span style="color:#f92672">+=</span> alpha <span style="color:#f92672">*</span> (expected <span style="color:#f92672">-</span> np<span style="color:#f92672">.</span>sum(W[s, action]))
+
+            <span style="color:#66d9ef">if</span> is_done:
+                <span style="color:#66d9ef">break</span>
+            state <span style="color:#f92672">=</span> state_next</code></pre></div>
+<p>The following figure shows how the agent behaves after 1000 epoch training in <code>MountainCar-v0</code> environment.</p>
+<p><img src="mountain-car.gif" /></p>
+<h3 id="misc">Misc</h3>
+<p>Full Jupyter notebook can be found <a href="https://github.com/yeyan/ML-Notebooks/blob/master/2020-04-23/QLearningFnApprox.ipynb">here</a>.</p>
+
+    </div>
+</section>
+
+            </div>
+        </div>
+        <div class="pure-u-1 pure-u-lg-1-5 pure-u-xl-1-8">
+            <div class="sidebar">
+                <div class="profile">
+    <img id="avatar-image" class="avatar" src="/img/ca114335172f7423310709f1ab26e4e6-yeyan.jpg"></img>
+    <h2 class="title"> Ye Yan </h2>
+    <h2 class="subtitle"> Sr. Data Scientist </h2>
+</div>
+
+<div class="social">
+    <ul class="pure-menu-list">
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="http://github.com/yeyan">
+                <i class="fab fa-github"></i>
+                Github
+            </a>
+            <a class="pure-menu-link" href="https://www.linkedin.com/in/ye-yan-83921a154">
+                <i class="fab fa-linkedin"></i>
+                LinkedIn
+            </a>
+        </li>
+    </ul>
+</div>
+
+            </div>
+        </div>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>
