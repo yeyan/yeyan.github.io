@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/style.css" />
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+</head>
+
+<body class="pure">
+    <nav class="navbar pure-menu pure-menu-horizontal">
+    <ul class="pure-menu-list">
+        
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/">Home</a>
+        </li>
+        
+        
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="/about/">About</a>
+        </li>
+        
+    </ul>
+</nav>
+<div class="banner">
+</div>
+
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-4-5 pure-u-xl-7-8">
+            <div class="content">
+                
+<section class="post">
+    <header class="post-header">
+        <h2 class="post-title">Deep Learning with PyTorch (Part 1)</h2>
+        
+        <p class="post-meta">
+            <span>
+                <i class="fas fa-calendar"></i>
+                2020-12-12
+            </span>
+        </p>
+        
+    </header>
+    <div class="post-content">
+        <p>Neural network is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about neural networks.</p>
+<h3 id="neural-network-to-the-bare-bones">Neural Network to the Bare-Bones</h3>
+<p>The simplest neural network actually has its own name: Logistic Regression. Assuming we have an input vector <span class="math inline">\(X\)</span> and a parametric matrix <span class="math inline">\(M\)</span>, then it can be expressed as <span class="math inline">\(\hat{Y}=\sigma(MX)\)</span> where <span class="math inline">\(\sigma\)</span> is the sigmoid function which is <span class="math inline">\(\sigma(x) = 1/(1 + e^{-x})\)</span>. A plain fully connected deep neural network can be expressed as the following:</p>
+<p><span class="math display">\[
+\begin{aligned}
+A_0 &amp;= X
+\\
+A_1 &amp;= h(M_1A_0)
+\\
+A_2 &amp;= h(M_2A_1)
+\\
+A_3 &amp;= h(M_3A_2)
+\\
+\vdots
+\\
+\hat{Y} &amp;= h(M_{n}A_{n})
+\end{aligned}
+\]</span></p>
+<p><span class="math inline">\(X\)</span> is the input, <span class="math inline">\(Y\)</span> is the output. <span class="math inline">\(h\)</span> here is a non-linear function which takes a vector as input and outputs another vector, theoretically it can be any function that is differentiable. In practice, we often pick functions like ReLU, LeakyReLU or sigmoid (Ironically, ReLU and LeakyReLU is not differentiable at 0, but we still use them as they have computation advantages). <span class="math inline">\(M_1, M_2 \dots,M_n\)</span> are parametric matrices between each layer.</p>
+<h3 id="mnist">MNIST</h3>
+<p>It is possible for one to hand make a neural network. But in practice, we often choose a mature deep learning framework to start with. Strictly speaking all those deep learning frameworks are essentially auto differentiation engines. As the raise of CUDA, all the main stream deep learning framework provide GPU based calculation, which is often a few times faster than CPU based calculation.</p>
+<p>In this post, we choose PyTorch as our deep learning framework. I find PyTorch hides less than Tensorflow in API level, which make it easier when you want to use some uncanny architecture. In the rest of this post we will use PyTorch to train a neural network that can recognize MNIST hand writing digits.</p>
+<h4 id="download-training-and-testing-data">Download Training and Testing Data</h4>
+<p>MNIST data is available almost everywhere, lots of deep learning framework ships MNIST dataset as a part of the package. In this post, we will do it in the old fashion way: download MNIST from <a href="http://yann.lecun.com/exdb/mnist/">Yann LeCun’s website</a>. I have made a simple shell script to download the dataset which can be found <a href="download.sh">here</a>.</p>
+<h4 id="load-and-clean-up-data">Load and Clean Up Data</h4>
+<p>The data was code in IDX file format. The first 4 bytes are the magic number of the file. Depends on the dimension of the array, the consecutive bytes (4 as a chunk) indicates the shape of the array stored. The following code shows how to convert the binary file into an numpy array.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">load_data</span>(filename):
+    <span style="color:#e6db74">&#34;&#34;&#34;
+</span><span style="color:#e6db74">    Load data from Idx file.
+</span><span style="color:#e6db74">        The first 4 bytes are magic number which indicates the file type
+</span><span style="color:#e6db74">        The following bytes indicates the shape of the data
+</span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+    <span style="color:#75715e"># determine the dimensionality of the array.</span>
+    match <span style="color:#f92672">=</span> re<span style="color:#f92672">.</span>search(re<span style="color:#f92672">.</span>compile(<span style="color:#e6db74">&#39;idx(?P&lt;index_size&gt;\d+)-ubyte.gz$&#39;</span>), filename)
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> match:
+        <span style="color:#66d9ef">raise</span> InvalidArgument(<span style="color:#e6db74">&#34;Not a idx byte file!&#34;</span>)
+
+    <span style="color:#66d9ef">with</span> gzip<span style="color:#f92672">.</span>open(filename, <span style="color:#e6db74">&#39;r&#39;</span>) <span style="color:#66d9ef">as</span> fd:
+        <span style="color:#75715e"># parse the shape of the array.</span>
+        shape <span style="color:#f92672">=</span> [int<span style="color:#f92672">.</span>from_bytes(fd<span style="color:#f92672">.</span>read(<span style="color:#ae81ff">4</span>), <span style="color:#e6db74">&#39;big&#39;</span>) <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(int(match<span style="color:#f92672">.</span>group(<span style="color:#e6db74">&#39;index_size&#39;</span>)) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>)][<span style="color:#ae81ff">1</span>:]
+        <span style="color:#75715e"># load data and reshape as the file indicated.</span>
+        <span style="color:#66d9ef">return</span> np<span style="color:#f92672">.</span>frombuffer(fd<span style="color:#f92672">.</span>read(), dtype<span style="color:#f92672">=</span>np<span style="color:#f92672">.</span>uint8)<span style="color:#f92672">.</span>reshape(shape)</code></pre></div>
+<p>Load data as numpy array is not the end of the story. The pixel value is ranged from 0 to 255, feed this directly to neural network will cause the parameters of the neural network flutter up and down violently, therefore we normalize it by dividing 255. Further more, as PyTorch only operates on tensors, all the data needs to convert into tensors.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#75715e"># If GPU is available, we will prefer GPU</span>
+<span style="color:#66d9ef">if</span> torch<span style="color:#f92672">.</span>cuda<span style="color:#f92672">.</span>is_available():
+    device <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>device(<span style="color:#e6db74">&#39;cuda:0&#39;</span>)
+<span style="color:#66d9ef">else</span>:
+    device <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>device(<span style="color:#e6db74">&#39;cpu&#39;</span>)
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">prepare</span>(x, y):
+    <span style="color:#e6db74">&#34;&#34;&#34;
+</span><span style="color:#e6db74">    Convert numpy arrays to tensors, and also normalize images.
+</span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+    <span style="color:#75715e"># normalize image pixels</span>
+    images <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>from_numpy(x<span style="color:#f92672">.</span>astype(np<span style="color:#f92672">.</span>float32))
+    images <span style="color:#f92672">/=</span> <span style="color:#ae81ff">255.</span>
+    images <span style="color:#f92672">=</span> images<span style="color:#f92672">.</span>unsqueeze(<span style="color:#ae81ff">1</span>)
+
+    <span style="color:#75715e"># move data to GPU if available</span>
+    <span style="color:#66d9ef">return</span> images<span style="color:#f92672">.</span>to(device), torch<span style="color:#f92672">.</span>from_numpy(y)<span style="color:#f92672">.</span>to(device, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>long)
+
+<span style="color:#75715e"># Load training data.</span>
+train_x, train_y <span style="color:#f92672">=</span> prepare(
+  load_data(<span style="color:#e6db74">&#39;data/train-images-idx3-ubyte.gz&#39;</span>),
+  load_data(<span style="color:#e6db74">&#39;data/train-labels-idx1-ubyte.gz&#39;</span>)
+)
+
+<span style="color:#75715e"># Load testing data.</span>
+test_x, test_y <span style="color:#f92672">=</span> prepare(
+    load_data(<span style="color:#e6db74">&#39;data/t10k-images-idx3-ubyte.gz&#39;</span>),
+    load_data(<span style="color:#e6db74">&#39;data/t10k-labels-idx1-ubyte.gz&#39;</span>)
+)</code></pre></div>
+<p>In the above code, the planed output of neural network is in one-hot format. Theoretically, <span class="math inline">\(y\)</span> here need to be in one-hot format as well. But PyTorch provides a very convenient loss functor named <code>CrossEntropyLoss</code> which has done all those for us. Therefore, we only need to pack the ground truth label in a LongTensor.</p>
+<h4 id="describe-the-neural-network-architecture-in-pytorch">Describe The Neural Network Architecture in PyTorch</h4>
+<p>The following code shows a “deep” convolutional network, that reads an 28x28 grey scale hand writing digit and outputs the probabilities of being each digits (0 to 9):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#f92672">import</span> torch
+<span style="color:#f92672">from</span> torch <span style="color:#f92672">import</span> nn
+
+<span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Model</span>(nn<span style="color:#f92672">.</span>Module):
+    <span style="color:#e6db74">&#34;&#34;&#34;
+</span><span style="color:#e6db74">    Convolutional neural network for MNIST dataset
+</span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+    <span style="color:#66d9ef">def</span> __init__(self):
+        <span style="color:#75715e"># Required for any PyTorch Module</span>
+        super()<span style="color:#f92672">.</span>__init__()
+
+        <span style="color:#75715e"># Layers</span>
+        self<span style="color:#f92672">.</span>layers <span style="color:#f92672">=</span> nn<span style="color:#f92672">.</span>ModuleList([
+            <span style="color:#75715e"># Convolutional Layer 1</span>
+            nn<span style="color:#f92672">.</span>Conv2d(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">32</span>, <span style="color:#ae81ff">3</span>, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>)),
+            nn<span style="color:#f92672">.</span>BatchNorm2d(<span style="color:#ae81ff">32</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            nn<span style="color:#f92672">.</span>Dropout(<span style="color:#f92672">.</span><span style="color:#ae81ff">1</span>),
+            nn<span style="color:#f92672">.</span>MaxPool2d(<span style="color:#ae81ff">2</span>),
+            <span style="color:#75715e"># Convolutional Layer 2</span>
+            nn<span style="color:#f92672">.</span>Conv2d(<span style="color:#ae81ff">32</span>, <span style="color:#ae81ff">64</span>, <span style="color:#ae81ff">3</span>, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>)),
+            nn<span style="color:#f92672">.</span>BatchNorm2d(<span style="color:#ae81ff">64</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            nn<span style="color:#f92672">.</span>Dropout(<span style="color:#f92672">.</span><span style="color:#ae81ff">1</span>),
+            nn<span style="color:#f92672">.</span>MaxPool2d(<span style="color:#ae81ff">2</span>),
+            <span style="color:#75715e"># Convolutional Layer 3</span>
+            nn<span style="color:#f92672">.</span>Conv2d(<span style="color:#ae81ff">64</span>, <span style="color:#ae81ff">128</span>, <span style="color:#ae81ff">3</span>, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>)),
+            nn<span style="color:#f92672">.</span>BatchNorm2d(<span style="color:#ae81ff">128</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            nn<span style="color:#f92672">.</span>Dropout(<span style="color:#f92672">.</span><span style="color:#ae81ff">1</span>),
+            nn<span style="color:#f92672">.</span>MaxPool2d(<span style="color:#ae81ff">2</span>),
+            <span style="color:#75715e"># Convolutional Layer 4</span>
+            nn<span style="color:#f92672">.</span>Conv2d(<span style="color:#ae81ff">128</span>, <span style="color:#ae81ff">128</span>, <span style="color:#ae81ff">3</span>, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>)),
+            nn<span style="color:#f92672">.</span>BatchNorm2d(<span style="color:#ae81ff">128</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            nn<span style="color:#f92672">.</span>Flatten(),
+            <span style="color:#75715e"># Fully Connected layer 1</span>
+            nn<span style="color:#f92672">.</span>Linear(<span style="color:#ae81ff">1152</span>, <span style="color:#ae81ff">512</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            <span style="color:#75715e"># Fully Connected layer 2</span>
+            nn<span style="color:#f92672">.</span>Linear(<span style="color:#ae81ff">512</span>, <span style="color:#ae81ff">256</span>),
+            nn<span style="color:#f92672">.</span>ReLU(),
+            <span style="color:#75715e"># Fully Connected layer 3</span>
+            nn<span style="color:#f92672">.</span>Linear(<span style="color:#ae81ff">256</span>, <span style="color:#ae81ff">10</span>),
+            nn<span style="color:#f92672">.</span>Softmax(dim<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+        ])
+        <span style="color:#75715e"># Move model to GPU if possible</span>
+        self<span style="color:#f92672">.</span>to(device)
+
+    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">forward</span>(self, x):
+        <span style="color:#75715e"># Apply each layer sequentially</span>
+        <span style="color:#66d9ef">for</span> layer <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>layers:
+            x <span style="color:#f92672">=</span> layer(x)
+        <span style="color:#66d9ef">return</span> x</code></pre></div>
+<p><em>Convolutional Layer</em></p>
+<p>Convolutional layers are very common in computer vision, as they shine in capturing local features. Assuming <span class="math inline">\(X\)</span> is a 3x3 matrix which represents a channel of a image, and K is a 2x2 matrix which is a kernel/filter matrix. Then their convolution can be express as the following:</p>
+<p><span class="math display">\[
+\begin{aligned}
+X &amp;= \begin{bmatrix}
+  x_1 &amp; x_2 &amp; x_3\\
+  x_4 &amp; x_5 &amp; x_6\\
+  x_8 &amp; x_7 &amp; x_9\\
+\end{bmatrix}
+\\
+K &amp;= \begin{bmatrix}
+  k_1 &amp; k_2\\
+  k_3 &amp; k_4\\
+\end{bmatrix}
+\\
+Conv(X, K) &amp;= \begin{bmatrix}
+  x_1k_1 + x_2k_2 + x_4k_3 + x_5k_4 &amp; x_2k_1 + x_3k_2 + x_5k_3 + x_6k_4\\
+  x_4k_1 + x_5k_2 + x_8k_3 + x_7k_4 &amp; x_5k_1 + x_6k_2 + x_7k_3 + x_9k_4
+\end{bmatrix}
+\end{aligned}
+\]</span></p>
+<p>We can also illustrate the idea in Python:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#f92672">from</span> torch.nn <span style="color:#f92672">import</span> functional <span style="color:#66d9ef">as</span> F
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">conv_channel</span>(inputs, kernel, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>), stride<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>)):
+    iheight, iwidth <span style="color:#f92672">=</span> inputs<span style="color:#f92672">.</span>shape
+    pheight, pwidth <span style="color:#f92672">=</span> padding
+
+    <span style="color:#75715e"># pad input image with zeros around border</span>
+    padded_inputs <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>zeros(iheight <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> pheight, iwidth <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> pwidth)
+    padded_inputs[pheight:pheight <span style="color:#f92672">+</span> iheight, pwidth: pwidth <span style="color:#f92672">+</span> iwidth] <span style="color:#f92672">=</span> inputs
+
+    kheight, kwidth <span style="color:#f92672">=</span> kernel<span style="color:#f92672">.</span>shape
+
+    <span style="color:#75715e"># calculate output shape</span>
+    output_shape <span style="color:#f92672">=</span> (iheight <span style="color:#f92672">-</span> kheight <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> pheight, iwidth <span style="color:#f92672">-</span> kwidth <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> pwidth)
+    output_shape <span style="color:#f92672">=</span> [np<span style="color:#f92672">.</span>ceil(o <span style="color:#f92672">/</span> s)<span style="color:#f92672">.</span>astype(int) <span style="color:#66d9ef">for</span> o, s <span style="color:#f92672">in</span> zip(output_shape, stride)]
+
+    <span style="color:#75715e"># initialize output tensor</span>
+    output <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>zeros(output_shape)
+
+    <span style="color:#66d9ef">for</span> h <span style="color:#f92672">in</span> range(output_shape[<span style="color:#ae81ff">0</span>]):
+        <span style="color:#66d9ef">for</span> w <span style="color:#f92672">in</span> range(output_shape[<span style="color:#ae81ff">1</span>]):
+            <span style="color:#75715e"># calculate with part of input image we want to filter</span>
+            hi, wi <span style="color:#f92672">=</span> [d <span style="color:#f92672">*</span> s <span style="color:#66d9ef">for</span> d, s <span style="color:#f92672">in</span> zip([h, w], stride)]
+            <span style="color:#75715e"># apply kernel/filter matrix to the part of the image and assign the result to output</span>
+            output[h, w] <span style="color:#f92672">=</span> (kernel <span style="color:#f92672">*</span> padded_inputs[hi:hi <span style="color:#f92672">+</span> kheight, wi:wi <span style="color:#f92672">+</span> kwidth])<span style="color:#f92672">.</span>sum()
+
+    <span style="color:#66d9ef">return</span> output
+
+<span style="color:#75715e"># Define a single 1 channel (grey scale) 5x5 image</span>
+<span style="color:#75715e"># Batch Size, Channel, Height, Width</span>
+inputs <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>randn(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">5</span>)
+
+<span style="color:#75715e"># Define a single 2x3 kernel/filter</span>
+<span style="color:#75715e"># Output Channel, Input Channel, Height, Width</span>
+kernel <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>randn(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">3</span>)
+
+<span style="color:#75715e"># Compare conv_channel&#39;s output and PyTorch&#39;s conv2d&#39;s output</span>
+<span style="color:#66d9ef">assert</span> torch<span style="color:#f92672">.</span>eq(
+    conv_channel(inputs[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :], kernel[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :], padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>), stride<span style="color:#f92672">=</span>(<span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">3</span>)),
+    F<span style="color:#f92672">.</span>conv2d(inputs, kernel, padding<span style="color:#f92672">=</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>), stride<span style="color:#f92672">=</span>(<span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">3</span>))[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :]
+)<span style="color:#f92672">.</span>all()<span style="color:#f92672">.</span>item()</code></pre></div>
+<p>To be continued …</p>
+
+    </div>
+</section>
+
+            </div>
+        </div>
+        <div class="pure-u-1 pure-u-lg-1-5 pure-u-xl-1-8">
+            <div class="sidebar">
+                <div class="profile">
+    <img id="avatar-image" class="avatar" src="/img/ca114335172f7423310709f1ab26e4e6-yeyan.jpg"></img>
+    <h2 class="title"> Ye Yan </h2>
+    <h2 class="subtitle"> Sr. Data Scientist </h2>
+</div>
+
+<div class="social">
+    <ul class="pure-menu-list">
+        <li class="pure-menu-item">
+            <a class="pure-menu-link" href="http://github.com/yeyan">
+                <i class="fab fa-github"></i>
+                Github
+            </a>
+            <a class="pure-menu-link" href="https://www.linkedin.com/in/ye-yan-83921a154">
+                <i class="fab fa-linkedin"></i>
+                LinkedIn
+            </a>
+        </li>
+    </ul>
+</div>
+
+            </div>
+        </div>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

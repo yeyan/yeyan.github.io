@@ -6,10 +6,20 @@
     <description>Recent content on Ye&#39;s ML Cafe</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 22 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 09 Dec 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="http://example.org/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Deep Learning with PyTorch (Part 1)</title>
+      <link>http://example.org/posts/deep-learning/</link>
+      <pubDate>Wed, 09 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>http://example.org/posts/deep-learning/</guid>
+      <description>Neural network is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about neural networks.
+Neural Network to the Bare-Bones The simplest neural network actually has its own name: Logistic Regression.</description>
+    </item>
     
     <item>
       <title>Q Learning With Linear Approximation</title>
