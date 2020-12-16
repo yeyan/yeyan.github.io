@@ -34,7 +34,7 @@
                 
 <section class="post">
     <header class="post-header">
-        <h2 class="post-title">Deep Learning with PyTorch (Part 1)</h2>
+        <h2 class="post-title">Deep Learning with PyTorch (In Progress)</h2>
         
         <p class="post-meta">
             <span>
@@ -243,7 +243,7 @@ stride <span style="color:#f92672">=</span> (<span style="color:#ae81ff">5</span
     conv_channel(inputs[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :], kernel[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :], padding<span style="color:#f92672">=</span>padding, stride<span style="color:#f92672">=</span>stride),
     F<span style="color:#f92672">.</span>conv2d(inputs, kernel, padding<span style="color:#f92672">=</span>padding, stride<span style="color:#f92672">=</span>stride)[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :]
 )<span style="color:#f92672">.</span>all()<span style="color:#f92672">.</span>item()</code></pre></div>
-<p><strong>Batch Normalization</strong></p>
+<p><strong>Batch Normalization Layer</strong></p>
 <p>Batch normalization, despite has a bit regulatory effect, is mainly used to speed up training. It is very commonly found in deep networks. Assuming batch <span class="math inline">\(B\)</span> have <span class="math inline">\(n\)</span> elements, then:</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -269,6 +269,12 @@ torch<span style="color:#f92672">.</span>isclose(
     (inputs <span style="color:#f92672">-</span> mu) <span style="color:#f92672">/</span> (var <span style="color:#f92672">+</span> epsilon)<span style="color:#f92672">.</span>sqrt()
 )</code></pre></div></p>
 <p>There is one more thing worth to notice, as after batch normalization expectation of the input is zero, we don’t have to have bias for the next adjacent layer.</p>
+<p><strong>Dropout Layer</strong></p>
+<p>Deep neural network is susceptible to over fit. It has so many parameters, which make it very vulnerable to fit into the noise in the training set. Dropout is a very computationally cheap way of regulating neural networks.</p>
+<p>Dropout only takes effect while in training. Assume input <span class="math inline">\(X = \begin{bmatrix} x_1 &amp; x_2 &amp; \dots &amp; x_n \end{bmatrix}\)</span> mask array <span class="math inline">\(D = \begin{bmatrix} d_1 &amp; d_2 &amp; \dots d_n \end{bmatrix}\)</span> and <span class="math inline">\(\forall d_i \in \{1, 0\}\; i \in \{1 \dots n\}; p = 1 - \frac{1}{n}\sum_{i=1}^n d_i\)</span> where p is the dropout rate. Then dropout output <span class="math inline">\(\hat{X} = \begin{bmatrix} x_1 d_1 &amp; x_2 d_2 &amp; \dots &amp; x_n d_n\end{bmatrix}\)</span>. After training is done, we need scale down parameters with <span class="math inline">\(1 - p\)</span>, as dropout makes those coefficients a bit larger.</p>
+<p>To illustrate this concept a bit intuitively, we can apply dropout on a MNIST hand writing images:</p>
+<p><img src="dropout.png" /></p>
+<p>We can still recognize those digits, although the last image has 40% of its feature missing. To some extent we can think dropout provides a way of breaking weak covariance between variables. Therefore, it encourages neural network to seek more reliable features, which makes our neural networks generalize better.</p>
 <p><strong>To be continued …</strong></p>
 
     </div>
