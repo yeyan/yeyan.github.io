@@ -275,6 +275,47 @@ torch<span style="color:#f92672">.</span>isclose(
 <p>To illustrate this concept a bit intuitively, we can apply dropout on a MNIST hand writing images:</p>
 <p><img src="dropout.png" /></p>
 <p>We can still recognize those digits, although the last image has 40% of its feature missing. To some extent we can think dropout provides a way of breaking weak covariance between variables. Therefore, it encourages neural network to seek more reliable features, which makes our neural networks generalize better.</p>
+<p><strong>Max Pooling Layer</strong></p>
+<p>Max pooling layers have some regulatory effects by emphasising the most locally activated feature, enticing neural networks develop distinctive features.</p>
+<p>Max pooling mechanism is somewhat similar to convolution. In both mechanism, we have a moving window size defined by kernel size and dilation. In convolution, what we after is the dot product between the matrix selected by moving window and kernel matrix, but in max pooling we only after the maximum value in selected window.</p>
+<p>The following code illustrate the idea of max pooling with dilation:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#f92672">from</span> torch.nn <span style="color:#f92672">import</span> functional <span style="color:#66d9ef">as</span> F
+
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">max_pool_channel</span>(inputs, kernel_size<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>, dilation<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, stride<span style="color:#f92672">=</span>None):
+    <span style="color:#e6db74">&#34;&#34;&#34;Max pooling inputs on a single channel (matrix level max pooling)&#34;&#34;&#34;</span>
+
+    <span style="color:#75715e"># Default stride to kernel size</span>
+    stride <span style="color:#f92672">=</span> stride <span style="color:#f92672">or</span> kernel_size
+
+    <span style="color:#75715e"># Calculate indices for pooling</span>
+    x_ind <span style="color:#f92672">=</span> (torch<span style="color:#f92672">.</span>arange(kernel_size) <span style="color:#f92672">*</span> dilation)<span style="color:#f92672">.</span>unsqueeze(<span style="color:#ae81ff">1</span>)<span style="color:#f92672">.</span>repeat(<span style="color:#ae81ff">1</span>, kernel_size)<span style="color:#f92672">.</span>flatten()
+    y_ind <span style="color:#f92672">=</span> (torch<span style="color:#f92672">.</span>arange(kernel_size) <span style="color:#f92672">*</span> dilation)<span style="color:#f92672">.</span>repeat(kernel_size)
+
+    <span style="color:#75715e"># Determine result size</span>
+    x_end <span style="color:#f92672">=</span> inputs<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">-</span> x_ind<span style="color:#f92672">.</span>max() <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+    y_end <span style="color:#f92672">=</span> inputs<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">-</span> y_ind<span style="color:#f92672">.</span>max() <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+
+    <span style="color:#66d9ef">assert</span> x_end <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">and</span> y_end <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>, <span style="color:#e6db74">&#34;It does not make sense to max pooling a input smaller than kernel!&#34;</span>
+
+    xsteps <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>arange(<span style="color:#ae81ff">0</span>, x_end, stride)
+    ysteps <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>arange(<span style="color:#ae81ff">0</span>, y_end, stride)
+
+    result <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>empty(xsteps<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>], ysteps<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>])
+
+    <span style="color:#66d9ef">for</span> i, anchor_x <span style="color:#f92672">in</span> enumerate(xsteps):
+        <span style="color:#66d9ef">for</span> j, anchor_y <span style="color:#f92672">in</span> enumerate(ysteps):
+            <span style="color:#75715e"># perform max pooling</span>
+            result[i, j] <span style="color:#f92672">=</span> inputs[anchor_x <span style="color:#f92672">+</span> x_ind, anchor_y <span style="color:#f92672">+</span> y_ind]<span style="color:#f92672">.</span>max()
+
+    <span style="color:#66d9ef">return</span> result
+
+
+inputs <span style="color:#f92672">=</span> (torch<span style="color:#f92672">.</span>randn(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">9</span>, <span style="color:#ae81ff">9</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">100</span>)<span style="color:#f92672">.</span>floor()
+
+<span style="color:#66d9ef">assert</span> torch<span style="color:#f92672">.</span>isclose(
+    max_pool_channel(inputs[<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, :, :], kernel_size<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>, dilation<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>),
+    F<span style="color:#f92672">.</span>max_pool2d(inputs, kernel_size<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>, dilation<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>)
+)</code></pre></div>
 <p><strong>To be continued …</strong></p>
 
     </div>
