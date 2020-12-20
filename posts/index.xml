@@ -2,40 +2,40 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on Ye&#39;s ML Cafe</title>
-    <link>http://example.org/posts/</link>
+    <link>https://yeyan.github.io/posts/</link>
     <description>Recent content in Posts on Ye&#39;s ML Cafe</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 09 Dec 2020 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="http://example.org/posts/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://yeyan.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Deep Learning with PyTorch (In Progress)</title>
-      <link>http://example.org/posts/deep-learning/</link>
+      <link>https://yeyan.github.io/posts/deep-learning/</link>
       <pubDate>Wed, 09 Dec 2020 00:00:00 +0000</pubDate>
       
-      <guid>http://example.org/posts/deep-learning/</guid>
+      <guid>https://yeyan.github.io/posts/deep-learning/</guid>
       <description>Neural network is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about neural networks.
 Neural Network to the Bare-Bones The simplest neural network actually has its own name: Logistic Regression.</description>
     </item>
     
     <item>
       <title>Q Learning With Linear Approximation</title>
-      <link>http://example.org/posts/q-learning-linear-approximation/</link>
+      <link>https://yeyan.github.io/posts/q-learning-linear-approximation/</link>
       <pubDate>Wed, 22 Apr 2020 00:00:00 +0000</pubDate>
       
-      <guid>http://example.org/posts/q-learning-linear-approximation/</guid>
+      <guid>https://yeyan.github.io/posts/q-learning-linear-approximation/</guid>
       <description>In our last post, we have used a table to track action values and built an agent that can solve randomly generated mazes. Table based \(Q(s, a)\) is pretty useful. Even in some cases that states are continuous, by discretizing states into integers we can still present action-value function with a table. In this post we are going to discuss a more general way of representing action-value function with Linear methods.</description>
     </item>
     
     <item>
       <title>Beat Mazes with Reinforcement Learning</title>
-      <link>http://example.org/posts/tabular-q-learning/</link>
+      <link>https://yeyan.github.io/posts/tabular-q-learning/</link>
       <pubDate>Fri, 10 Apr 2020 00:00:00 +0000</pubDate>
       
-      <guid>http://example.org/posts/tabular-q-learning/</guid>
+      <guid>https://yeyan.github.io/posts/tabular-q-learning/</guid>
       <description>RL is a blooming field at the moment. In my opinion, it has the most potential to become a general AI. But the main idea behind RL is actually simple and straight forward. In this blog post let’s build a RL agent that can beat randomly generated mazes to demonstrate this idea.
 Generate Random Maze To start, we need a maze. And honestly manually draw maze is pretty painful, therefore we are going to generate one randomly.</description>
     </item>
