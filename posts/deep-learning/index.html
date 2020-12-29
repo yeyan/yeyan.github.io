@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme=""><head>
-    <title> Ye Yan | Deep Learning with PyTorch (In Progress) </title>
+    <title> Ye Yan | Deep Learning with PyTorch </title>
 
     
     <meta charset="utf-8"><meta name="generator" content="Hugo 0.54.0" /><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -40,7 +40,7 @@
             integrity="sha256-54LbE27BjRBaRVJwLqxJ9GINaGfaP7&#43;Ai9U&#43;gGyWvm4="
             crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
     <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Deep Learning with PyTorch (In Progress)"/>
+<meta name="twitter:title" content="Deep Learning with PyTorch"/>
 <meta name="twitter:description" content="Neural network (NN) is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about networks.
 1. Neural Network to the Bare-Bones The simplest neural network actually has its own name: Logistic Regression."/>
 
@@ -110,7 +110,7 @@
     <div class="post  animated fadeInDown ">
         <div class="post-content">
             <div class="post-title">
-                <h3>Deep Learning with PyTorch (In Progress)</h3>
+                <h3>Deep Learning with PyTorch</h3>
                 
             </div>
 
@@ -450,7 +450,33 @@ inputs <span style="color:#f92672">=</span> (torch<span style="color:#f92672">.<
         model<span style="color:#f92672">.</span>eval()</code></pre></div>
 <p>Stochastic gradient descent brings down the computational cost significantly. But also it makes the training targets wandering around the lowest loss function terrain instead directly pointing to it. Therefore we are expecting the accuracy to jump up and down during the training process. The gap between training and testing, we can roughly consider those as over fit. As neural networks learned some features from training set that can not be generalized to testing sets, which means those features are actually noises. Therefore we over fit our neural network to the training set.</p>
 <p><img src="loss_history.png" /></p>
-<p><strong>To be continued …</strong></p>
+<h4 id="visualize-predictions">2.4 Visualize Predictions</h4>
+<p>Now we have a trained model, let us checkout its predictions on the test sets.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">visualize</span>(model, x, y):
+    <span style="color:#75715e"># predict labels and convert result to numpy arrays</span>
+    predicted_labels <span style="color:#f92672">=</span> model(x)<span style="color:#f92672">.</span>argmax(dim<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">.</span>cpu()<span style="color:#f92672">.</span>numpy()
+    labels <span style="color:#f92672">=</span> y<span style="color:#f92672">.</span>cpu()<span style="color:#f92672">.</span>numpy()
+    images <span style="color:#f92672">=</span> x<span style="color:#f92672">.</span>squeeze(<span style="color:#ae81ff">1</span>)<span style="color:#f92672">.</span>cpu()<span style="color:#f92672">.</span>numpy()
+
+    plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">16</span>, <span style="color:#ae81ff">8</span>))
+
+    <span style="color:#66d9ef">for</span> i, image <span style="color:#f92672">in</span> enumerate(images):
+        plt<span style="color:#f92672">.</span>subplot(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">5</span>, i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>)
+        plt<span style="color:#f92672">.</span>imshow(image)
+        plt<span style="color:#f92672">.</span>tick_params(
+            labelbottom<span style="color:#f92672">=</span>False)
+        plt<span style="color:#f92672">.</span>tick_params(
+            labelleft<span style="color:#f92672">=</span>False)
+        <span style="color:#75715e"># print out predictions on the top left corner</span>
+        plt<span style="color:#f92672">.</span>text(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">3</span>, f<span style="color:#e6db74">&#39;{predicted_labels[i]}&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;red&#39;</span>)
+        <span style="color:#75715e"># print out true label on top right corner</span>
+        plt<span style="color:#f92672">.</span>text(<span style="color:#ae81ff">25</span>, <span style="color:#ae81ff">3</span>, f<span style="color:#e6db74">&#34;{labels[i]}&#34;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;white&#39;</span>)
+
+    plt<span style="color:#f92672">.</span>savefig(<span style="color:#e6db74">&#39;predict.png&#39;</span>, bbox_inches<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;tight&#39;</span>)
+    plt<span style="color:#f92672">.</span>show()
+
+visualize(model, test_x[:<span style="color:#ae81ff">10</span>, :, :, :], test_y[:<span style="color:#ae81ff">10</span>])</code></pre></div>
+<p><img src="predict.png" /></p>
 </div>
         <div class="post-footer">
             <div class="info">
