@@ -1,25 +1,15 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Ye&#39;s ML Cafe</title>
-    <link>https://yeyan.github.io/</link>
-    <description>Recent content on Ye&#39;s ML Cafe</description>
+    <title>Q Learning on Ye&#39;s ML Cafe</title>
+    <link>https://yeyan.github.io/tags/q-learning/</link>
+    <description>Recent content in Q Learning on Ye&#39;s ML Cafe</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 09 Dec 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 22 Apr 2020 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="https://yeyan.github.io/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://yeyan.github.io/tags/q-learning/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>Deep Learning with PyTorch (In Progress)</title>
-      <link>https://yeyan.github.io/posts/deep-learning/</link>
-      <pubDate>Wed, 09 Dec 2020 00:00:00 +0000</pubDate>
-      
-      <guid>https://yeyan.github.io/posts/deep-learning/</guid>
-      <description>Neural network (NN) is one of the hottest topics today. Scientists have invented lots of specialized variations of them: Long/Short Term Memory (LSTM), Gated Recurrent Unit (GRU), Deep Convolutional Network (DCN), Auto Encoder (AE) and etc. All of those are essentially different ways of constructing parametric functional approximations. In this post, I would like to introduce some basics about networks.
-1. Neural Network to the Bare-Bones The simplest neural network actually has its own name: Logistic Regression.</description>
-    </item>
     
     <item>
       <title>Q Learning With Linear Approximation</title>
@@ -38,15 +28,6 @@
       <guid>https://yeyan.github.io/posts/tabular-q-learning/</guid>
       <description>RL is a blooming field at the moment. In my opinion, it has the most potential to become a general AI. But the main idea behind RL is actually simple and straight forward. In this blog post let’s build a RL agent that can beat randomly generated mazes to demonstrate this idea.
 Generate Random Maze To start, we need a maze. And honestly manually draw maze is pretty painful, therefore we are going to generate one randomly.</description>
-    </item>
-    
-    <item>
-      <title>About</title>
-      <link>https://yeyan.github.io/about/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://yeyan.github.io/about/</guid>
-      <description>I will put something here in the future.</description>
     </item>
     
   </channel>

@@ -140,34 +140,34 @@ X(n) &amp;= \begin{bmatrix} 0&amp; 0&amp; \dots&amp; 1&amp; \end{bmatrix}^T
 </span><span style="color:#e6db74">        tiles   : an array specify how many tiles we should have at each dimension
 </span><span style="color:#e6db74">        tilings : how many grids we should have
 </span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
-    
+
     obs <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>observation_space
     lb, ub <span style="color:#f92672">=</span> obs<span style="color:#f92672">.</span>low, obs<span style="color:#f92672">.</span>high
-    
+
     <span style="color:#75715e"># We need a way of ravel multi-index. see aslo numpy.ravel_multi_index</span>
     units <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>hstack([[<span style="color:#ae81ff">1</span>], np<span style="color:#f92672">.</span>cumprod((tilings, ) <span style="color:#f92672">+</span> tuple(tiles))])[:<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>]
 
-    <span style="color:#75715e"># We want our grid one tile larger than the value range, </span>
+    <span style="color:#75715e"># We want our grid one tile larger than the value range,</span>
     <span style="color:#75715e"># therefore we don&#39;t get overflow when shifting the grid.</span>
     scale <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>diag((np<span style="color:#f92672">.</span>array(tiles) <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">/</span> (ub <span style="color:#f92672">-</span> lb))
-    
+
     <span style="color:#75715e"># grid offset</span>
     offset <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(tilings) <span style="color:#f92672">/</span> tilings
-    
+
     <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">feature</span>(x, debug<span style="color:#f92672">=</span>False):
 
-        <span style="color:#75715e"># We don&#39;t really generate grid to determine which tile we are, </span>
-        <span style="color:#75715e"># but we project the state on a hyper-cube with size defined by tiling and stiles </span>
+        <span style="color:#75715e"># We don&#39;t really generate grid to determine which tile we are,</span>
+        <span style="color:#75715e"># but we project the state on a hyper-cube with size defined by tiling and stiles</span>
         <span style="color:#75715e"># At last we can use np.floor to acquire the multi-index of a given state.</span>
 
         fs <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>column_stack([
-            np<span style="color:#f92672">.</span>arange(tilings), 
+            np<span style="color:#f92672">.</span>arange(tilings),
             np<span style="color:#f92672">.</span>floor((scale <span style="color:#960050;background-color:#1e0010">@</span> (x <span style="color:#f92672">-</span> lb))<span style="color:#f92672">.</span>reshape(<span style="color:#ae81ff">1</span>, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">+</span> offset<span style="color:#f92672">.</span>reshape(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1</span>))<span style="color:#f92672">.</span>astype(int)
         ])
-        
+
         <span style="color:#75715e"># We ravel the multi-index by acquire the dot product with units</span>
         <span style="color:#66d9ef">return</span> units <span style="color:#960050;background-color:#1e0010">@</span> fs<span style="color:#f92672">.</span>T
-    
+
     <span style="color:#66d9ef">return</span> feature</code></pre></div>
 <h3 id="q-learning-with-tile-encoding">Q-Learning with Tile Encoding</h3>
 <p>To make sure we have a good approximation of the optimal action value function, we want <span class="math inline">\(\sum \mu(s) [Q^*(s, a) - Q(s, a, W)]^2\)</span> to be minimum, where <span class="math inline">\(Q^*\)</span> is the optimal policy, s and s’ are current state and next state correspondingly, <span class="math inline">\(r\)</span> is the reward, <span class="math inline">\(\mu(s)\)</span> is the state distribution. We can update <span class="math inline">\(W\)</span> with stochastic semi-gradient descent:</p>
@@ -180,11 +180,11 @@ W_{t + 1} &amp;= W_t - \frac{1}{2}\alpha\nabla[Q^*(s, a) - X(s)^T W_t]^2\\
 <p>Also there is an implementation trick we used here. <span class="math inline">\(X(s)\)</span> is a special vector, majority of it are zeros and the rest entries are ones. If we denote <span class="math inline">\((i_1, i_2 \dots i_n)\)</span> the index of none zeros entries of <span class="math inline">\(X(s)\)</span>, then <span class="math inline">\(W(s)^TX(s) = \sum_{j=i_1}^{i_n} W_j\)</span>. Therefore we avoid the dot product by simply summing up corresponding none zero entries in <span class="math inline">\(W(s)\)</span>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-py" data-lang="py">n_action <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>action_space<span style="color:#f92672">.</span>n
 
-<span style="color:#75715e"># How many epoch and max_steps we train </span>
+<span style="color:#75715e"># How many epoch and max_steps we train</span>
 n_epoch <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>
 n_maxstep <span style="color:#f92672">=</span> <span style="color:#ae81ff">300</span>
 
-<span style="color:#75715e"># Feature extraction function with 20 10x10 tiles </span>
+<span style="color:#75715e"># Feature extraction function with 20 10x10 tiles</span>
 activate <span style="color:#f92672">=</span> make_activate(env, [<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">10</span>], <span style="color:#ae81ff">20</span>)
 
 <span style="color:#75715e"># Linear weight</span>
@@ -217,7 +217,7 @@ epsilon_space <span style="color:#f92672">=</span> np<span style="color:#f92672"
 
             state_next, reward, is_done, _ <span style="color:#f92672">=</span> env<span style="color:#f92672">.</span>step(action)
             sp <span style="color:#f92672">=</span> activate(state_next)
-                
+
             <span style="color:#75715e"># np.sum(W[sp], axis=0) is another way to do dot product</span>
             expected <span style="color:#f92672">=</span> reward <span style="color:#f92672">+</span> gamma <span style="color:#f92672">*</span> np<span style="color:#f92672">.</span>max(np<span style="color:#f92672">.</span>sum(W[sp], axis<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)) <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> is_done)
             W[s, action] <span style="color:#f92672">+=</span> alpha <span style="color:#f92672">*</span> (expected <span style="color:#f92672">-</span> np<span style="color:#f92672">.</span>sum(W[s, action]))
@@ -233,7 +233,8 @@ epsilon_space <span style="color:#f92672">=</span> np<span style="color:#f92672"
         <div class="post-footer">
             <div class="info">
                 
-                
+                <span class="separator"><a class="tag" href="/tags/reinforcement-learning/">Reinforcement Learning</a><a class="tag" href="/tags/q-learning/">Q Learning</a></span>
+
             </div>
         </div>
 
